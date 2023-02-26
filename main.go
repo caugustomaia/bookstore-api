@@ -11,6 +11,7 @@ func main() {
 	r := gin.Default()
 
 	models.ConnectDatabase()
+	models.ConnectCache()
 
 	r.GET("/books", controllers.FindBooks)
 	r.GET("/books/:id", controllers.FindBook)

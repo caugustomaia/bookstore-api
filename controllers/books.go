@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bookstore-api/models"
+	"encoding/json"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -32,17 +33,40 @@ type UpdateBookInput struct {
 // Find a book
 func FindBook(c *gin.Context) {
 	var book models.Book
+	//var response string
 
-	if err := models.DB.Where("id = ?", c.Param("id")).First(&book).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Record not found!",
+	cache_val, err := models.RDB.Get(c.Param("id")).Result()
+	if err != nil {
+		if err := models.DB.Where("id = ?", c.Param("id")).First(&book).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Record not found!",
+			})
+			return
+		}
+
+		byte_value, err := json.Marshal(book)
+		if err != nil {
+			panic(err)
+		}
+
+		if err := models.RDB.Set(c.Param("id"), byte_value, 5000000000).Err(); err != nil { // 10000000000 = 10 seconds
+			panic(err)
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"data": book,
 		})
 		return
+	}
+
+	if err := json.Unmarshal([]byte(cache_val), &book); err != nil {
+		panic(err)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": book,
 	})
+
 }
 
 // POST /books
